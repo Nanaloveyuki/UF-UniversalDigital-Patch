@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>UFUniversalDigitalPatch</AssemblyName>
+    <OutputPath>../1.6/Assemblies/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DebugType>none</DebugType>
+    <WorkshopRoot Condition="'$(WorkshopRoot)' == ''">D:\Appdata\Steam\steamapps\workshop\content\294100</WorkshopRoot>
+    <UFAssembly Condition="'$(UFAssembly)' == ''">$(WorkshopRoot)\3651799915\1.6\Assemblies\UFRecipes.dll</UFAssembly>
+    <WarehouseAssembly Condition="'$(WarehouseAssembly)' == ''">$(WorkshopRoot)\3740898940\1.6\Assemblies\UniversalDigitalWarehouseLib.dll</WarehouseAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4633" PrivateAssets="all" />
+    <PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" PrivateAssets="all" />
+    <Reference Include="UFRecipes"><HintPath>$(UFAssembly)</HintPath><Private>false</Private></Reference>
+    <Reference Include="UniversalDigitalWarehouseLib"><HintPath>$(WarehouseAssembly)</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="CheckModReferences" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(UFAssembly)')" Text="UFRecipes.dll not found. Set UFAssembly or WorkshopRoot." />
+    <Error Condition="!Exists('$(WarehouseAssembly)')" Text="UniversalDigitalWarehouseLib.dll not found. Set WarehouseAssembly or WorkshopRoot." />
+  </Target>
+</Project>

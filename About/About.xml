@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>UF Universal Digital Patch</name>
+  <author>Nanaloveyuki</author>
+  <packageId>Nanaloveyuki.UFUniversalDigitalPatch</packageId>
+  <supportedVersions><li>1.6</li></supportedVersions>
+  <description>Connects UF Light Industries fully automatic printers to Universal Digital Warehouse. Missing recipe ingredients are reconstructed directly into the printer using warehouse output filters and point prices. No pawn hauling is required. Semi-automatic production is unchanged.</description>
+  <modDependencies>
+    <li><packageId>brrainz.harmony</packageId><displayName>Harmony</displayName><steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl></li>
+    <li><packageId>KindSeal.UFLI</packageId><displayName>UF Light Industries Furniture</displayName><steamWorkshopUrl>https://steamcommunity.com/sharedfiles/filedetails/?id=3651799915</steamWorkshopUrl></li>
+    <li><packageId>Chezhou.UniversalDigitalWarehouse</packageId><displayName>Universal Digital Warehouse</displayName><steamWorkshopUrl>https://steamcommunity.com/sharedfiles/filedetails/?id=3740898940</steamWorkshopUrl></li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+    <li>KindSeal.UFLI</li>
+    <li>Chezhou.UniversalDigitalWarehouse</li>
+  </loadAfter>
+</ModMetaData>
