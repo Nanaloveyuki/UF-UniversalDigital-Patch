@@ -14,6 +14,12 @@ materials. It observes bill ingredient filters, warehouse output filters,
 warehouse power, faction and forbidden state. Warehouses must be on the printer's
 map; points retain the warehouse's existing game-wide sharing behavior.
 
+The patch targets the five-argument `TryPullIngredientsFromCandidates` overload.
+The installed UF version calls it directly from idle bill selection, while the
+ready-state map pull reaches it through the four-argument overload. Patching only
+`TryPullIngredientsFromMap` misses idle printers. Verification checks these call
+edges in the installed DLL, not merely the existence of method signatures.
+
 Purchases use `DigitalWarehouseMaterialUtility.PointsForDefCount`, including the
 warehouse point multiplier, buy multiplier and difficulty pricing. Physical stock
 is used first for mixed recipes; non-mixed recipes choose a single allowed material
@@ -32,6 +38,12 @@ Failed digital supply retries at most once every 600 game ticks per bill. Normal
 pause/recheck scheduling still applies. Power or point changes can therefore take
 up to a normal retry interval to be noticed. Semi-automatic mode is untouched.
 Work time, quality, maintenance and final product generation remain UF behavior.
+
+Supply attempts now log their result under `[UF Digital Patch]` when that result
+changes: printer gates, available warehouse count, failed material plans, rejected
+quotes, UF ingredient-validation failures, and successful supply. These diagnostics
+do not bypass production requirements. They are needed to diagnose an in-game idle
+printer that cannot be reproduced by the numeric and holder-double tests alone.
 
 Whole-stack transformation recipes (`ignoreIngredientCountTakeEntireStacks`) use
 UF's original physical-only behavior. Digital material creation is limited to

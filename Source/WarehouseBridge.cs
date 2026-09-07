@@ -18,13 +18,17 @@ namespace UFUniversalDigitalPatch
             internal double Price = double.PositiveInfinity;
         }
 
-        internal static bool TrySupply(Bill bill, Building_SuperWorkbench bench, ThingOwner destination)
+        internal static bool TrySupply(Bill bill, Building_SuperWorkbench bench, ThingOwner destination, out string status)
         {
+            status = "supply incomplete";
             var points = GameComponent_DigitalWarehousePoints.Instance;
-            if (points == null) return false;
-            List<Building_DigitalWarehouse> warehouses = bench.Map.listerBuildings.allBuildingsColonist
-                .OfType<Building_DigitalWarehouse>().Where(IsUsable).OrderBy(w => w.thingIDNumber).ToList();
-            if (warehouses.Count == 0) return false;
+            if (points == null) return Fail(out status, "missing GameComponent_DigitalWarehousePoints");
+            List<Building_DigitalWarehouse> allWarehouses = bench.Map.listerBuildings.allBuildingsColonist
+                .OfType<Building_DigitalWarehouse>().ToList();
+            List<Building_DigitalWarehouse> warehouses = allWarehouses.Where(IsUsable).OrderBy(w => w.thingIDNumber).ToList();
+            if (warehouses.Count == 0)
+                return Fail(out status, "no usable warehouse; indexed=" + allWarehouses.Count + "; " +
+                    string.Join("; ", allWarehouses.Select(w => $"{w.ThingID}: spawned={w.Spawned}, forbidden={w.IsForbidden(Faction.OfPlayer)}, power={w.TryGetComp<CompPowerTrader>()?.PowerOn}")));
 
             var materials = new List<Material>();
             var byDef = new Dictionary<ThingDef, Material>();
@@ -86,7 +90,11 @@ namespace UFUniversalDigitalPatch
             int[] available = materials.Select(m => checked(m.Things.Sum(t => t.stackCount))).ToArray();
             IngredientPlan plan = IngredientPlan.Create(available, materials.Select(m => m.Price).ToArray(),
                 requirements, bill.recipe.allowMixingIngredients, double.PositiveInfinity);
-            if (plan == null) return false;
+            if (plan == null)
+                return Fail(out status, "no complete material plan; " + string.Join("; ",
+                    requirements.Select((row, index) => $"slot={index}, candidates=" + string.Join(",", materials
+                        .Select((m, i) => row[i] > 0 ? $"{m.Def.defName}(need={row[i]},physical={available[i]},price={m.Price})" : null)
+                        .Where(s => s != null)))));
 
             // Requote aggregate counts through the original API (including its float rounding).
             float cost = 0;
@@ -94,10 +102,12 @@ namespace UFUniversalDigitalPatch
             {
                 if (plan.Buy[i] == 0) continue;
                 Material material = materials[i];
-                if (!IsUsable(material.Warehouse) || !material.Warehouse.CanValidateOutputFor(material.Def)) return false;
+                if (!IsUsable(material.Warehouse) || !material.Warehouse.CanValidateOutputFor(material.Def))
+                    return Fail(out status, "warehouse output became unavailable: " + material.Def.defName);
                 cost += DigitalWarehouseMaterialUtility.PointsForDefCount(material.Def, plan.Buy[i], material.Warehouse.PointMultiplier);
             }
-            if (float.IsNaN(cost) || float.IsInfinity(cost) || cost < 0 || cost > points.StoredPoints + 0.0001f) return false;
+            if (float.IsNaN(cost) || float.IsInfinity(cost) || cost < 0 || cost > points.StoredPoints + 0.0001f)
+                return Fail(out status, $"invalid or unaffordable quote: cost={cost}, points={points.StoredPoints}");
 
             using (var transfer = new SupplyTransfer(destination, bench))
             {
@@ -111,7 +121,7 @@ namespace UFUniversalDigitalPatch
                         remaining -= count;
                         if (remaining == 0) break;
                     }
-                    if (remaining != 0) return false;
+                    if (remaining != 0) return Fail(out status, "physical stock changed: " + materials[i].Def.defName);
                     remaining = plan.Buy[i];
                     while (remaining > 0)
                     {
@@ -122,10 +132,20 @@ namespace UFUniversalDigitalPatch
                 }
                 // Use UF's own selector as the final authority on special filters and recipe rules.
                 // No debit occurs until all transfers and this validation have succeeded.
-                if (!AutoSequenceUtil.HasIngredients(bill, destination) || !points.TrySpendPoints(cost)) return false;
+                if (!AutoSequenceUtil.HasIngredients(bill, destination))
+                    return Fail(out status, "UF rejected reconstructed ingredients; " + string.Join(", ", destination.Select(t =>
+                        $"{t.def.defName}x{t.stackCount}(allowed={bill.IsFixedOrAllowedIngredient(t)})")));
+                if (!points.TrySpendPoints(cost)) return Fail(out status, $"final debit rejected: cost={cost}, points={points.StoredPoints}");
                 transfer.Committed = true;
+                status = "supplied; purchased=" + string.Join(",", materials.Select((m, i) => plan.Buy[i] > 0 ? $"{m.Def.defName}x{plan.Buy[i]}" : null).Where(s => s != null));
                 return true;
             }
+        }
+
+        private static bool Fail(out string status, string reason)
+        {
+            status = reason;
+            return false;
         }
 
         private static bool IsUsable(Building_DigitalWarehouse warehouse)
